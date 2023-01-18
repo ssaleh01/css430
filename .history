@@ -1,0 +1,39 @@
+ls
+ ls -l
+ ls
+ls -al
+ls & whoami
+ls & whoami
+cat < run.sh
+ls | wc
+ls > junk.txt
+cat < junk.txt
+ ls & whoami
+sleep 5
+sleep 5 &
+ls
+ls -al
+ls & whoami
+ls & whoami
+ls > junk.txt
+cat < junk.txt
+ls | wc
+ls & whoami
+ ls ; sleep 5
+ ls & sleep 5
+ls
+ls -al
+ls & whoami
+ls & whoami
+ls > junk.txt
+cat < junk.txt
+ls | wc
+ whoami
+ls & whoami
+ ls & whoami
+ whoami
+sleep 5 &
+ ls | wc
+ls & whoami
+ls & whoami
+ sleep 5 &

@@ -19,7 +19,7 @@ int in, savedIn; //in file and saved in file
 int out, savedOut; //out file and saved out file
 int saveComm; //saved commands
 
-void toToken(char* command, char** args) {
+void toToken(char *command, char **args) {
   int argCounter = 0; //argument counter
   int commLength = strlen(command); //command length
   int argStart = -1; //arg starting input
@@ -37,6 +37,12 @@ void toToken(char* command, char** args) {
       command[i] = '\0'; //token will be null
     }
     else {
+      
+      //check if command has ';' to run consecutively
+      if (command[i] == ';') {
+        waitTime = 5;
+      };
+
       //check if command has '&' to run concurrently
       if (command[i] == '&') {
         waitTime = 0;
@@ -56,7 +62,7 @@ void toToken(char* command, char** args) {
 
 //history feature
 void historyFeat(char **args) {
-  //open history file
+  //open history file, read mode
   FILE *hist = fopen(HIST_PATH, "r");
 
   if (hist == NULL) {
@@ -65,16 +71,16 @@ void historyFeat(char **args) {
   else {
     if (args[1] == NULL) {
       //get input single char at a time
-      char comm = fgetc(hist);
-      while (comm != EOF) {
-        printf("%c", comm);
-        comm = fgetc(hist);
+      char c = fgetc(hist);
+      while (c != EOF) {
+        printf("%c", c);
+        c = fgetc(hist);
       };// while (comm != EOF); //EOF is end of file
     }
-    else if (!strcmp(args[1], "-c")) {
+    /*else if (!strcmp(args[1], "-c")) {
       saveComm = 0;
       remove(HIST_PATH);
-    }
+    }*/
     else {
       printf("Sorry! Invalid synatax. Please try again.");
     };
@@ -86,7 +92,7 @@ void historyFeat(char **args) {
 
 //record commands in history, like a helper function almost
 void historyRecorder(char *command) {
-  FILE *hist = fopen(HIST_PATH, "a+");
+  FILE *hist = fopen(HIST_PATH, "a+"); //a+ to create new file
   fprintf(hist, "%s", command); //print command to file
   rewind(hist); //restart to beginning of file
 };
@@ -208,10 +214,12 @@ int main(void)
 
     //open in file
     if (inFile != -1) {
-      in = open(args[inFile], O_RDONLY); //read only flag
+      //flags: read only, create file if not existing
+      //0777 is for permissions
+      in = open(args[inFile], O_RDONLY | O_CREAT, 0777);
       
       if (in < 0) {
-        printf("Sorry! File failed to open.\n", args[inFile]);
+        printf("Sorry! File failed to open. %s \n", args[inFile]);
         alerts = 1;
       }
       else {
@@ -224,14 +232,16 @@ int main(void)
 
     //open out file
     if (outFile != -1) {
-      out = open(args[outFile], O_WRONLY); //write only flag
+      //flags: write only, create file if not existing
+      //0777 is for permissions
+      out = open(args[outFile], O_WRONLY | O_CREAT, 0777);
       
       if (out < 0) {
-        printf("Sorry! File failed to open.\n", args[inFile]);
+        printf("Sorry! File failed to open. %s \n", args[outFile]);
         alerts = 1;
       }
       else {
-        savedIn = dup(0); //duplicate file to in
+        savedOut = dup(1); //duplicate file to in
         dup2(out, 1);
         close(out);
         args[outFile - 1] = NULL;
@@ -265,7 +275,6 @@ int main(void)
           else {
             args[1] = "-SIGSTOP";
           };
-          //args[1] = strcmp(args[0], "stop") ? "-SIGCONT" : "SIGSTOP";
           args[0] = "kill";
           args[3] = NULL;
         };
@@ -294,10 +303,13 @@ int main(void)
         else { //in parent process
           if (waitTime) {
             wait(NULL);
+            continue;
           };
         };
       };
+
       strcpy(lastCommand, command);
+
       if (saveComm) {
         historyRecorder(command);
       };
@@ -332,5 +344,6 @@ int main(void)
     };
     */
   };
+  
   return 0;
 };

@@ -1,0 +1,5 @@
+a.out
+junk.txt
+run.sh
+shell.c
+shell.out
