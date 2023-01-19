@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-//#include <sys/stat.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 
 #define MAX_LINE 80 /* The maximum length command */
@@ -37,11 +37,6 @@ void toToken(char *command, char **args) {
       command[i] = '\0'; //token will be null
     }
     else {
-      
-      //check if command has ';' to run consecutively
-      if (command[i] == ';') {
-        waitTime = 5;
-      };
 
       //check if command has '&' to run concurrently
       if (command[i] == '&') {
@@ -55,9 +50,9 @@ void toToken(char *command, char **args) {
         argStart = i;
       };
     };
-
-    args[argCounter] = NULL; //complete tokenization
   };
+
+  args[argCounter] = NULL; //complete tokenization
 };
 
 //history feature
@@ -77,10 +72,10 @@ void historyFeat(char **args) {
         c = fgetc(hist);
       };// while (comm != EOF); //EOF is end of file
     }
-    /*else if (!strcmp(args[1], "-c")) {
+    else if (!strcmp(args[1], "-c")) {
       saveComm = 0;
       remove(HIST_PATH);
-    }*/
+    }
     else {
       printf("Sorry! Invalid synatax. Please try again.");
     };
@@ -123,7 +118,7 @@ void flagCheck(char **args) {
     //communication via pipe
     if (!strcmp(args[i], "|")) {
       if (args[i + 1] == NULL) {
-        printf("Sorry! Invalid command format. Please try again.");
+        printf("Sorry! Invalid command after | . Please try again.");
       }
       else {
         pipeCom = i;
@@ -155,6 +150,8 @@ int main(void)
   int alerts;
   int pipeCH[2]; //pipe channel, just pipe[2] confuses compiler
 
+  //char execOrder[MAX_LINE]; //record ';', '&', and '|' to execute properly
+  
   /*
   enum{READ, WRITE};
   pid_t pid; //compiler doesn't like pit_t find out why
@@ -175,6 +172,7 @@ int main(void)
     */
 
     fgets(command, MAX_LINE, stdin);
+    
     waitTime = 1;
     alerts = 0;
     outFile = -1;
@@ -184,6 +182,14 @@ int main(void)
 
     strcpy(tokenCommand, command);
     toToken(tokenCommand, args);
+    
+    /*
+    //check if command includes ';', '&', or '|'
+    if (strcmp(args[0], ";") || strcmp(args[0], "&") || strcmp(args[0], "|")) {
+      
+      exec(args);
+
+    };*/
 
     //check if args is empty or is a new line
     if (args[0] == NULL || !strcmp(args[0], "\0") || !strcmp(args[0], "\n")) {
@@ -210,13 +216,23 @@ int main(void)
       };
     };
 
+    /*
+    //attempted bonus for ascii
+    if (!strcmp(args[0], "ascii")) {
+      printf("  (|_|)\n");
+      printf(" (='.'=)\n");
+      printf("( > º < )\n");
+      printf("('')_('')\n");
+      continue;
+    };*/
+
     flagCheck(args);
 
     //open in file
     if (inFile != -1) {
       //flags: read only, create file if not existing
       //0777 is for permissions
-      in = open(args[inFile], O_RDONLY | O_CREAT, 0777);
+      in = open(args[inFile], O_RDONLY);// | O_CREAT, 0777);
       
       if (in < 0) {
         printf("Sorry! File failed to open. %s \n", args[inFile]);
@@ -234,7 +250,8 @@ int main(void)
     if (outFile != -1) {
       //flags: write only, create file if not existing
       //0777 is for permissions
-      out = open(args[outFile], O_WRONLY | O_CREAT, 0777);
+      out = open(args[outFile], O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IRGRP | S_IWGRP | S_IWUSR);
+      //| O_CREAT, 0777);
       
       if (out < 0) {
         printf("Sorry! File failed to open. %s \n", args[outFile]);
@@ -250,15 +267,18 @@ int main(void)
 
     //pipe communication establishment
     if (pipeCom != -1) {
-      for (int i = 0; i < pipeCom; i++) {
+      int i = 0;
+      for (; i < pipeCom; i++) {
         argptr1[i] = args[i];
       };
-      argptr1[0] = NULL;
+      argptr1[i] = NULL;
       
-      for (int j = 1; args[j] != NULL; j++) {
-        argptr1[j - pipeCom - 1] = args[j];
+      i++;
+
+      for (; args[i] != NULL; i++) {
+        argptr2[i - pipeCom - 1] = args[i];
       };
-      argptr2[1] = NULL;
+      argptr2[i] = NULL;
     };
 
     if (!alerts && should_run) {
@@ -266,7 +286,7 @@ int main(void)
         historyFeat(args);
       }
       else {
-        //go back to this and attempt to revise
+        //go back to this and attempt to revise?
         if (!strcmp(args[0], "stop") || !strcmp(args[0], "continue")) {
           args[2] = args[1];
           if (strcmp(args[0], "stop")) {
@@ -282,6 +302,7 @@ int main(void)
         if (fork() == 0) { //in child process
           if (pipeCom != -1) {
             pipe(pipeCH);
+
             if (fork() == 0) { //in child of child process
               savedOut = dup(1);
               dup2(pipeCH[1], 1);
@@ -303,7 +324,7 @@ int main(void)
         else { //in parent process
           if (waitTime) {
             wait(NULL);
-            continue;
+            //continue;
           };
         };
       };
@@ -312,9 +333,8 @@ int main(void)
 
       if (saveComm) {
         historyRecorder(command);
+        history = 1;
       };
-      
-      history = 1;
     };
 
     dup2(savedOut, 1);
